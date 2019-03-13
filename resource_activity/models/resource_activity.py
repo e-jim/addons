@@ -369,6 +369,23 @@ class ResourceActivity(models.Model):
         compute='_compute_registrations_paid',
         store=True,
     )
+    current_user_location_id = fields.Many2one(
+        comodel_name='resource.location',
+        string='Current User Location',
+        compute='_compute_current_user_location',
+        search='_search_current_user_location_id',
+    )
+
+    @api.multi
+    def _compute_current_user_location(self):
+        location_id = self.env.user.partner_id.resource_location
+        for activity in self:
+            activity.current_user_location_id = location_id
+
+    def _search_current_user_location_id(self, operator, value):
+        if operator == 'like':
+            operator = 'ilike'
+        return [('current_user_location_id', operator, value)]
 
     @api.onchange('location_id')
     def onchange_location_id(self):
