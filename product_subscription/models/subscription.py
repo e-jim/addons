@@ -1,86 +1,117 @@
 # -*- coding: utf-8 -*-
+# Copyright 2019 Coop IT Easy SCRL fs
+#   Houssine Bakkali <houssine@coopiteasy.be>
+# License AGPL-3.0 or later (https://www.gnu.org/licenses/agpl.html).
 from openerp import models, fields, api, _
-
 from openerp.exceptions import UserError
 
 
 class ResPartner(models.Model):
     _inherit = "res.partner"
 
-    firstname = fields.Char('First Name')
-    lastname = fields.Char('Last Name')
-    subscriber = fields.Boolean(string="Subscriber")
-    old_subscriber = fields.Boolean(string="Old subscriber")
-    subscriptions = fields.One2many('product.subscription.object',
-                                    'subscriber',
-                                    string="Subscription")
+    firstname = fields.Char(  # fixme how does it interact with module partner_firstname?
+        string='First Name')
+    lastname = fields.Char(
+        string='Last Name')
+    subscriber = fields.Boolean(
+        string='Subscriber')
+    old_subscriber = fields.Boolean(
+        string='Old subscriber')
+    subscriptions = fields.One2many(
+        comodel_name='product.subscription.object',
+        inverse_name='subscriber',
+        string="Subscription")
 
 
 class ProductTemplate(models.Model):
     _inherit = "product.template"
 
-    subscription = fields.Boolean(string="Subscription")
-    product_qty = fields.Integer(string="Product quantity")
+    subscription = fields.Boolean(
+        string='Subscription')
+    product_qty = fields.Integer(  # todo duplicate field?
+        string='Product quantity')
 
 
 class SubscriptionTemplate(models.Model):
-    _name = "product.subscription.template"
+    _name = 'product.subscription.template'
 
-    name = fields.Char(string="Subscription name",
-                       copy=False,
-                       required=True)
-    description = fields.Char(string="Description")
-    product_qty = fields.Integer(string="Subscription quantity",
-                                 required=True,
-                                 help="This is the quantity of product that"
-                                 " will be allocated by this subscription")
-    price = fields.Float(related='product.lst_price',
-                         string="Subscription price",
-                         readonly=True)
-    publish = fields.Boolean(string="Publish on website")
-    product = fields.Many2one('product.template', string='Product',
-                              domain=[('subscription', '=', True)],
-                              required=True)
-    analytic_distribution = fields.Many2one('account.analytic.distribution',
-                                            string="Analytic distribution")
-    journal = fields.Many2one('account.journal',
-                              string='Journal',
-                              required=True,
-                              domain=[('type', '=', 'sale')])
+    name = fields.Char(
+        string='Subscription name',
+        copy=False,
+        required=True)
+    description = fields.Char(
+        string='Description')
+    product_qty = fields.Integer(  # todo duplicate field?
+        string='Subscription quantity',
+        required=True,
+        help='This is the quantity of product that'
+             ' will be allocated by this subscription')
+    price = fields.Float(
+        related='product.lst_price',
+        string='Subscription price',
+        readonly=True)
+    publish = fields.Boolean(
+        string='Publish on website')
+    product = fields.Many2one(
+        comodel_name='product.template',
+        string='Product',
+        domain=[('subscription', '=', True)],
+        required=True)
+    analytic_distribution = fields.Many2one(
+        comodel_name='account.analytic.distribution',
+        string='Analytic distribution')
+    journal = fields.Many2one(
+        comodel_name='account.journal',
+        string='Journal',
+        required=True,
+        domain=[('type', '=', 'sale')])
 
 
 class SubscriptionRequest(models.Model):
     _name = "product.subscription.request"
-
     _order = "subscription_date desc, id desc"
 
-    name = fields.Char(string="Name",
-                       copy=False)
-    gift = fields.Boolean(string="Gift?")
-    is_company = fields.Boolean(string="Company?")
-    sponsor = fields.Many2one('res.partner', string="Sponsor")
-    subscriber = fields.Many2one('res.partner', string="Subscriber",
-                                 required=True)
-    subscription_date = fields.Date(string='Subscription request date',
-                                    default=fields.Date.today())
-    payment_date = fields.Date(string="Payment date", readonly=True)
-    invoice = fields.Many2one('account.invoice',
-                              string="Invoice",
-                              readonly=True,
-                              copy=False)
-    state = fields.Selection([('draft', 'Draft'),
-                              ('sent', 'Sent'),
-                              ('paid', 'Paid'),
-                              ('cancel', 'Cancelled')],
-                             string="State",
-                             default="draft")
-    subscription = fields.Many2one('product.subscription.object',
-                                   string="Subscription",
-                                   readonly=True,
-                                   copy=False)
-    subscription_template = fields.Many2one('product.subscription.template',
-                                            string="Subscription template",
-                                            required=True)
+    name = fields.Char(
+        string='Name',
+        copy=False)
+    gift = fields.Boolean(
+        string='Gift?')
+    is_company = fields.Boolean(
+        string='Company?')
+    sponsor = fields.Many2one(
+        comodel_name='res.partner', 
+        string='Sponsor')
+    subscriber = fields.Many2one(
+        comodel_name='res.partner', 
+        string='Subscriber',
+        required=True)
+    subscription_date = fields.Date(
+        string='Subscription request date',
+        default=fields.Date.today())
+    payment_date = fields.Date(
+        string='Payment date',
+        readonly=True)
+    invoice = fields.Many2one(
+        comodel_name='account.invoice',
+        string='Invoice',
+        readonly=True,
+        copy=False)
+    state = fields.Selection(
+        [('draft', 'Draft'),
+         ('sent', 'Sent'),
+         ('paid', 'Paid'),
+         ('cancel', 'Cancelled')],
+        string='State',
+        default='draft')
+    subscription = fields.Many2one(
+        comodel_name='product.subscription.object',
+        string='Subscription',
+        readonly=True,
+        copy=False)
+    subscription_template = fields.Many2one(
+        comodel_name='product.subscription.template',
+        string='Subscription template',
+        required=True)
 
     def _get_account(self, partner, product):
         account = (product.property_account_income_id or
@@ -140,7 +171,9 @@ class SubscriptionRequest(models.Model):
 
     @api.model
     def create(self, vals):
-        prod_sub_req_seq = self.env.ref('product_subscription.sequence_product_subscription_request', False)
+        prod_sub_req_seq = self.env.ref(
+            'product_subscription.sequence_product_subscription_request', 
+            False)
 
         prod_sub_num = prod_sub_req_seq.next_by_id()
         vals['name'] = prod_sub_num
@@ -179,6 +212,7 @@ class SubscriptionRequest(models.Model):
             try:
                 pending_request.validate_request()
             except UserError:
+                # todo: notify
                 continue
 
 
@@ -194,7 +228,9 @@ class SubscriptionObject(models.Model):
                                         ('state', '!=', 'terminated')])
         sub_to_terminate.write({'state': 'terminated'})
 
-        subscribers = self.search([('state', '=', 'terminated')]).mapped('subscriber')
+        subscribers = (
+            self.search([('state', '=', 'terminated')])
+                .mapped('subscriber'))
         to_deactivate = subscribers.filtered('subscriber')
 
         if len(to_deactivate) > 0:
@@ -209,21 +245,27 @@ class SubscriptionObject(models.Model):
             subscriber_wrong_status.write({'subscriber': True,
                                            'old_subscriber': False})
 
-    name = fields.Char(string="Name",
-                       copy=False,
-                       required=True)
-    subscriber = fields.Many2one('res.partner',
-                                 string="Subscriber",
-                                 required=True)
-    counter = fields.Float(string="Counter")
-    subscribed_on = fields.Date(string="First subscription date")
-    state = fields.Selection([('draft', 'Draft'),
-                              ('waiting', 'Waiting'),
-                              ('ongoing', 'Ongoing'),
-                              ('renew', 'Need to Renew'),
-                              ('terminated', 'Terminated')],
-                             string="State",
-                             default="draft")
-    subscription_requests = fields.One2many('product.subscription.request',
-                                            'subscription',
-                                            string="Subscription request")
+    name = fields.Char(
+        string='Name',
+        copy=False,
+        required=True)
+    subscriber = fields.Many2one(
+        comodel_name='res.partner',
+        string='Subscriber',
+        required=True)
+    counter = fields.Float(
+        string='Counter')
+    subscribed_on = fields.Date(
+        string='First subscription date')
+    state = fields.Selection(
+        [('draft', 'Draft'),
+         ('waiting', 'Waiting'),
+         ('ongoing', 'Ongoing'),
+         ('renew', 'Need to Renew'),
+         ('terminated', 'Terminated')],
+        string='State',
+        default='draft')
+    subscription_requests = fields.One2many(
+        comodel_name='product.subscription.request',
+        inverse_name='subscription',
+        string='Subscription request')
